@@ -7,7 +7,7 @@ CFLAGS =  -Wall -Wextra -Weffc++ -Wcast-align -Wcast-qual -Wconversion -Wctor-dt
 		  -Wstrict-aliasing -Wstrict-null-sentinel -Wswitch-default -Wswitch-enum -Wtype-limits -Wundef 			\
 		  -Wunreachable-code -Wwrite-strings -fexceptions -g -pipe -D_DEBUG -D_EJUDGE_CLIENT_SIDE -D_EJC
 
-PREF_SRC = ./src/
+PREF_SRC = ./src1/
 PREF_OBJ = ./obj/
 
 SRC = $(wildcard $(PREF_SRC)*.cpp)

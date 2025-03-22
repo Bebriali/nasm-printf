@@ -1,6 +1,36 @@
-section .bss
-    buffer  resb BUF_SIZE
+section .rodata
 
+align 8
+
+table:
+    dq def_case      ;'a'
+    dq b_op
+    dq c_op
+    dq d_op
+    dq def_case      ;'e'
+    dq def_case
+    dq def_case
+    dq def_case
+    dq def_case
+    dq def_case
+    dq def_case
+    dq def_case
+    dq def_case
+    dq def_case      ;'n'
+    dq o_op
+    dq p_op
+    dq def_case      ;'q'
+    dq def_case      ;'r'
+    dq s_op
+    dq def_case      ;'t'
+    dq def_case
+    dq def_case
+    dq def_case      ;'w'
+    dq x_op
+    dq def_case      ;'y'
+    dq def_case      ;'z'
+    dq prc_op
+    dq def_case
 section .data
     Msg:        db "section %s is for some data %d %%%b", 0x0a
     MsgLen      equ $ - Msg
@@ -14,8 +44,11 @@ section .data
     SYS_WRITE   equ 1
     STDOUT      equ 1
 
-section .text
+section .bss
+    buffer  resb BUF_SIZE
 
+section .text
+global def_case
 global _start
 
 _start: pop rax
@@ -23,14 +56,15 @@ _start: pop rax
 
         mov rsi, buffer
 
-HANDLING
+.HANDLING:
         mov rax, [rdi]
         call _switch_ops
 
         cmp rax, '\0'
-        jne HANDLING
+        jne .HANDLING
 
         ;stream buffer using syscall
+        call _buffer_stdout
 
         mov rax, 0x3C       ;END OF PROGRAM
         xor rdi, rdi
@@ -38,98 +72,77 @@ HANDLING
 
 _switch_ops:
     cmp rax, '%'
-    jne default
+    jne def_case
 
-OP_CHECK
+.OP_CHECK:
     inc rdi
     mov rax, [rdi]
     inc rdi
 
-    sub rax, 'a'
-
-    cmp rax, 'b'
-    je [table + rax * 8]
-
-    cmp rax, 'c'
-    je [table + rax * 8]
-
-    cmp rax, 'd'
-    je [table + rax * 8]
-
-    cmp rax, 'o'
-    je [table + rax * 8]
-
-    cmp rax, 'p'
-    je [table + rax * 8]
-
-    cmp rax, 's'
-    je [table + rax * 8]
-
-    cmp rax, 'x'
-    je [table + rax * 8]
-
-    add rax, 'a'
-
     cmp rax, '%'
     je prc_op
 
-    dec rdi
-    jmp default
+    sub rax, 'a'
 
-s_op
+    mov rax, [table + rax * 8]
+    jmp rax
+
+    dec rdi
+    jmp def_case
+
+s_op:
     pop rax
 
     ;put string to bufer
     call _str_to_buf
 
-    jmp default
-c_op
+    jmp def_case
+c_op:
     pop rax
 
     ;put char to the bufer
     call _char_to_buf
 
-    jmp default
-d_op
+    jmp def_case
+d_op:
     push 4          ;nums_quantity
     push 10         ;radix
     
     call _dec_to_buf
     
-    jmp default
-x_op
+    jmp def_case
+x_op:
     push 4          ;nums_quantity
     push 4          ;slip
     push 1111b      ;mask for 1 digit
     
     call _binfit_to_buf
 
-    jmp default
-o_op
+    jmp def_case
+o_op:
     push 4          ;nums_quantity
     push 3          ;slip
     push 111b       ;mask for 1 digit
     
     call _binfit_to_buf
 
-    jmp default
-b_op
+    jmp def_case
+b_op:
     push 8          ;nums_quantity
     push 1          ;slip
     push 1b         ;mask for 1 digit
     
     call _binfit_to_buf
                ;(buffer addr in rsi)
-    jmp default
-p_op
+    jmp def_case
+p_op:
     pop rax
     ;get ptr translation
-    jmp default
-prc_op
-    pop rax
-    mov [rsi], '%'
-    jmp default
-default
+    jmp def_case
+prc_op:
+    mov [rsi], rax
+    jmp def_case
+def_case:
     mov [rsi], ax
     ;skip   ;push rdi
             ;push rsi
@@ -151,9 +164,9 @@ _binfit_to_buf:
     pop rcx             ;nums quantity
     pop rax             ;number
     ;push rcx
-    ;mov rcx, 4      ;for %b - 8 ; %d - ? ; %o - 5
+    ;mov rcx, 4         ;for %b - 8 ; %d - ? ; %o - 5
 
-LOOP_X
+.LOOP_X:
     push rax
     and rax, rdx
 
@@ -161,8 +174,9 @@ LOOP_X
     inc rsi
 
     pop rax
-    shr rax, rbx      ;for %b - 1 ; %d - ? ; %o - 3
-    loop lOOP_X
+    mov cl, bl
+    shr rax, cl        ;for %b - 1 ; %d - ? ; %o - 3
+    loop .LOOP_X
 
     ret
 
@@ -171,14 +185,14 @@ _dec_to_buf:
     pop rcx             ;nums quantity
     pop rax
 
-LOOP_D
+.LOOP_D:
     div rbx             ; rax <- quotient & rbx <- reminder
 
     mov [rsi], bx
     inc rsi
 
-    testq rax, rax
-    jnz LOOP_D
+    test rax, rax
+    jnz .LOOP_D
 
     ret
 
@@ -194,17 +208,18 @@ _str_to_buf:
     push rdi
     mov rdi, rax
 
-STR_OUT
-    cmp [rdi], '\0'
-    je END_STR_OUT
+.STR_OUT:
+    cmp word [rdi], '\0'
+    je .END_STR_OUT
 
-    mov [rsi], [rdi]
+    mov ax, [rdi]
+    mov [rsi], ax
     inc rsi
     inc rdi
 
-    jmp STR_OUT
+    jmp .STR_OUT
 
-END_STR_OUT
+.END_STR_OUT:
     pop rax
     mov rdi, rax
     ret
@@ -224,40 +239,3 @@ _buffer_stdout:
     rep stosb
 
     ret
-
-_strlen:
-
-
-section .rodata
-
-    align 8
-
-table:
-    dq default      ;'a'
-    dq b_op
-    dq c_op
-    dq d_op
-    dq default      ;'e'
-    dq default
-    dq default
-    dq default
-    dq default
-    dq default
-    dq default
-    dq default
-    dq default
-    dq default      ;'n'
-    dq o_op
-    dq p_op
-    dq default      ;'q'
-    dq default      ;'r'
-    dq s_op
-    dq default      ;'t'
-    dq default
-    dq default
-    dq default      ;'w'
-    dq x_op
-    dq default      ;'y'
-    dq default      ;'z'
-    dq prc_op
-    dq default

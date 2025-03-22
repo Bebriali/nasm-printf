@@ -36,7 +36,7 @@ struct argument
 };
 
 int TestPrintf(const char* filename);
-char** CutByNul(char** str, size_t str_size);
+str_mark* CutByNul(char** str, size_t str_size);
 str_mark* MarkCtor(void);
 argument** GetArgs(str_mark* mark);
 extern "C" int myprintf(char* format, ...);
