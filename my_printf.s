@@ -1,22 +1,36 @@
 section .bss
+    buffer  resb BUF_SIZE
 
-buffer  resb 128
+section .data
+    Msg:        db "section %s is for some data %d %%%b", 0x0a
+    MsgLen      equ $ - Msg
+
+    ErrDef:     db "error: wrong parameter in my_printf func", 0x0a
+    ErrDefLen   equ $ - ErrDef
+
+    var         dq  0xffffaaaa
+
+    BUF_SIZE    equ 128     
+    SYS_WRITE   equ 1
+    STDOUT      equ 1
 
 section .text
 
-global _main
+global _start
 
-_main: pop rdi
+_start: pop rax
+        mov rdi, rax
 
-        mov rcx, MsgLen
         mov rsi, buffer
 
-HANDLING:
+HANDLING
         mov rax, [rdi]
         call _switch_ops
 
+        cmp rax, '\0'
+        jne HANDLING
 
-
+        ;stream buffer using syscall
 
         mov rax, 0x3C       ;END OF PROGRAM
         xor rdi, rdi
@@ -24,74 +38,99 @@ HANDLING:
 
 _switch_ops:
     cmp rax, '%'
-    je OP_CHECK:
+    jne default
 
-OP_CHECK:
+OP_CHECK
     inc rdi
     mov rax, [rdi]
     inc rdi
 
-    cmp rax, 's'
-    je .table(, rdi, 8)
-
-    cmp rax, 'c'
-    je .table(, rdi, 16)
-
-    cmp rax, 'd'
-    je .table(, rdi, 24)
-
-    cmp rax, 'x'
-    je .table(, rdi, 32)
-
-    cmp rax, 'o'
-    je .table(, rdi, 40)
+    sub rax, 'a'
 
     cmp rax, 'b'
-    je .table(, rdi, 48)
+    je [table + rax * 8]
 
-    cmp rax, '%'
-    je .table(, rdi, 56)
+    cmp rax, 'c'
+    je [table + rax * 8]
+
+    cmp rax, 'd'
+    je [table + rax * 8]
+
+    cmp rax, 'o'
+    je [table + rax * 8]
 
     cmp rax, 'p'
-    je .table(, rdi, 64)
+    je [table + rax * 8]
+
+    cmp rax, 's'
+    je [table + rax * 8]
+
+    cmp rax, 'x'
+    je [table + rax * 8]
+
+    add rax, 'a'
+
+    cmp rax, '%'
+    je prc_op
 
     dec rdi
-    jmp .default
+    jmp default
 
-.s_op:
+s_op
     pop rax
+
     ;put string to bufer
-    jmp .default
-.c_op:
+    call _str_to_buf
+
+    jmp default
+c_op
     pop rax
+
     ;put char to the bufer
-    jmp .default
-.d_op:
-    pop rax
-    ;put digit to the bufer
-    jmp .default
-.x_op:
-    pop rax
-    ;call _reg_to_x
-    jmp .default
-.o_op:
-    pop rax
-    ;call reg_to_oct
-    jmp .default
-.b_op:
-    pop rax
-    ;call reg_to_b           ;(buffer addr in rsi)
-    jmp .default
-.prc_op:
-    pop rax
-    mov [rsi], '%'
-    jmp .default
-.p_op:
+    call _char_to_buf
+
+    jmp default
+d_op
+    push 4          ;nums_quantity
+    push 10         ;radix
+    
+    call _dec_to_buf
+    
+    jmp default
+x_op
+    push 4          ;nums_quantity
+    push 4          ;slip
+    push 1111b      ;mask for 1 digit
+    
+    call _binfit_to_buf
+
+    jmp default
+o_op
+    push 4          ;nums_quantity
+    push 3          ;slip
+    push 111b       ;mask for 1 digit
+    
+    call _binfit_to_buf
+
+    jmp default
+b_op
+    push 8          ;nums_quantity
+    push 1          ;slip
+    push 1b         ;mask for 1 digit
+    
+    call _binfit_to_buf
+               ;(buffer addr in rsi)
+    jmp default
+p_op
     pop rax
     ;get ptr translation
-    jmp .default
-.default:
-    mov [rsi], rdi
+    jmp default
+prc_op
+    pop rax
+    mov [rsi], '%'
+    jmp default
+default
+    mov [rsi], ax
     ;skip   ;push rdi
             ;push rsi
 
@@ -104,28 +143,46 @@ OP_CHECK:
             ;pop rsi
             ;pop rdi
 
-ret
+    ret
 
-_reg_to_x:
-    push rcx
-    mov rcx, 4      ;for %b - 8 ; %d - ? ; %o - 5
+_binfit_to_buf:
+    pop rdx             ;mask for 1 digit
+    pop rbx             ;slip
+    pop rcx             ;nums quantity
+    pop rax             ;number
+    ;push rcx
+    ;mov rcx, 4      ;for %b - 8 ; %d - ? ; %o - 5
 
-.LOOP_X:
+LOOP_X
     push rax
-    and rax, 1111b
+    and rax, rdx
 
-    mov [rsi], eax
+    mov [rsi], ax
     inc rsi
 
     pop rax
-    shr rax, 4      ;for %b - 1 ; %d - ? ; %o - 3
-    loop .LOOP_X
-
-    pop rcx
+    shr rax, rbx      ;for %b - 1 ; %d - ? ; %o - 3
+    loop lOOP_X
 
     ret
 
-reg_to_char:
+_dec_to_buf:
+    pop rbx             ;radix
+    pop rcx             ;nums quantity
+    pop rax
+
+LOOP_D
+    div rbx             ; rax <- quotient & rbx <- reminder
+
+    mov [rsi], bx
+    inc rsi
+
+    testq rax, rax
+    jnz LOOP_D
+
+    ret
+
+_char_to_buf:
     and rax, 11111111b
 
     mov [rsi], eax
@@ -133,41 +190,74 @@ reg_to_char:
 
     ret
 
-str_to_buf:
+_str_to_buf:
     push rdi
     mov rdi, rax
 
-.STR_OUT:
+STR_OUT
     cmp [rdi], '\0'
-    je .END_STR_OUT
+    je END_STR_OUT
 
     mov [rsi], [rdi]
     inc rsi
     inc rdi
 
-    jmp .STR_OUT
+    jmp STR_OUT
 
-.END_STR_OUT:
-    pop rsi
+END_STR_OUT
+    pop rax
+    mov rdi, rax
     ret
 
-section .data
+_buffer_stdout:
+    ;string from buffer to console
+    mov rax, SYS_WRITE
+    mov rdi, STDOUT
+    mov rsi, buffer
+    mov rdx, BUF_SIZE
+    syscall
 
-.table:
-    dw .s_op
-    dw .c_op
-    dw .d_op
-    dw .x_op
-    dw .o_op
-    dw .b_op
-    dw .prc_op
-    dw .p_op
-    dw .default
+    ;clear buffer
+    mov rdi, buffer
+    mov rcx, 128
+    xor rax, rax
+    rep stosb
 
-Msg:    db "section %s is for some data %d %%%b", 0x0a
-MsgLen  equ $ - Msg
+    ret
 
-ErrDef: db "error: wrong parameter in my_printf func", 0x0a
-ErrDefLen equ $ - ErrDef
+_strlen:
 
-var     dw 0ffffaaaah
+
+section .rodata
+
+    align 8
+
+table:
+    dq default      ;'a'
+    dq b_op
+    dq c_op
+    dq d_op
+    dq default      ;'e'
+    dq default
+    dq default
+    dq default
+    dq default
+    dq default
+    dq default
+    dq default
+    dq default
+    dq default      ;'n'
+    dq o_op
+    dq p_op
+    dq default      ;'q'
+    dq default      ;'r'
+    dq s_op
+    dq default      ;'t'
+    dq default
+    dq default
+    dq default      ;'w'
+    dq x_op
+    dq default      ;'y'
+    dq default      ;'z'
+    dq prc_op
+    dq default
