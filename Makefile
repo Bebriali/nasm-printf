@@ -1,4 +1,4 @@
-TARGET = tree
+TARGET = printf
 CC = g++
 CFLAGS =  -Wall -Wextra -Weffc++ -Wcast-align -Wcast-qual -Wconversion -Wctor-dtor-privacy -Wempty-body 			\
 		  -Wfloat-equal -Wformat-security -Wformat=2 -Wignored-qualifiers -Winit-self -Winline -Wlogical-op 		\
@@ -7,16 +7,19 @@ CFLAGS =  -Wall -Wextra -Weffc++ -Wcast-align -Wcast-qual -Wconversion -Wctor-dt
 		  -Wstrict-aliasing -Wstrict-null-sentinel -Wswitch-default -Wswitch-enum -Wtype-limits -Wundef 			\
 		  -Wunreachable-code -Wwrite-strings -fexceptions -g -pipe -D_DEBUG -D_EJUDGE_CLIENT_SIDE -D_EJC
 
-PREF_SRC = ./src1/
-PREF_OBJ = ./obj/
+PREF_SRC_C = ./src_c/
+PREF_SRC_S = ./src_s/
+PREF_OBJ   = ./obj/
 
-SRC = $(wildcard $(PREF_SRC)*.cpp)
-OBJ = $(patsubst $(PREF_SRC)%.cpp, $(PREF_OBJ)%.o, $(SRC))
+SRC_C = $(wildcard $(PREF_SRC_C)*.cpp)
+SRC_S = $(wildcard $(PREF_SRC_S)*.s)
+OBJ_C = $(patsubst $(PREF_SRC_C)%.cpp, $(PREF_OBJ)%.o, $(SRC_C))
+OBJ_S = $(patsubst $(PREF_SRC_S)%.s,   $(PREF_OBJ)%.o, $(SRC_S))
 
-$(TARGET) : $(OBJ)
-	$(CC) $(OBJ) -o $(TARGET)
+$(TARGET) : $(OBJ_C) $(OBJ_S)
+	$(CC) $(OBJ_C) $(OBJ_S) -o $(TARGET) -no-pie
 
-$(PREF_OBJ)%.o : $(PREF_SRC)%.cpp
+$(PREF_OBJ)%.o : $(PREF_SRC_C)%.cpp
 	$(CC) -c $< -I include -o $@ $(CFLAGS)
 
 clean :

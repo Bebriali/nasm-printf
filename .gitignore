@@ -1,0 +1,4 @@
+./obj/*.o
+./src_s/*.o
+./src_c/*.o
+./lst/*.lst
