@@ -1,4 +1,4 @@
-./obj/*.o
-./src_s/*.o
-./src_c/*.o
-./lst/*.lst
+obj/*.o
+src_s/*.o
+src_c/*.o
+lst/*.lst
