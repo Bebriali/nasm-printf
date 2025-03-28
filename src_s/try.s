@@ -10,7 +10,6 @@ myprintf:
 
     mov rax, 0x01
     mov rdi, 1
-
     push rbp                            ; save rbp
     mov rbp, rsp                        ; rbp - counter for stack
 
