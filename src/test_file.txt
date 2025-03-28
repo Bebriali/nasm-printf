@@ -1,2 +1,2 @@
 printing such strings in that particular way is so '%x' and, to be %s, ill do it %d years$ x 0xdead s honest d 1000000
-%s%o%%%%%%x%d%string%ceal&stroke$ s string 0 888 x 0xface d 1000
+%s%o%%%%%%x%d%string%ceal&stroke$ s string o 888 x 0xface d 1000
