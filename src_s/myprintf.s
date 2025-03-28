@@ -2,6 +2,7 @@ global myprintf
 
 section .bss
         buffer  resb BUF_SIZE
+        out_mes resb BUF_SIZE
 
 section .rodata
 
@@ -12,28 +13,17 @@ table:
         dq b_op
         dq c_op
         dq d_op
-        times 'n' - 'e' dq def_case
 
-        ;dq def_case      ;'e'
-        ;dq def_case
-        ;dq def_case
-        ;dq def_case
-        ;dq def_case
-        ;dq def_case
-        ;dq def_case
-        ;dq def_case
-        ;dq def_case
-        ;dq def_case      ;'n'
+        times 'n' - 'e' + 1 dq def_case
 
         dq o_op
         dq p_op
         dq def_case      ;'q'
         dq def_case      ;'r'
         dq s_op
-        dq def_case      ;'t'
-        dq def_case
-        dq def_case
-        dq def_case      ;'w'
+
+        times 'w' - 't' + 1 dq def_case
+
         dq x_op
         dq def_case      ;'y'
         dq def_case      ;'z'
@@ -66,61 +56,49 @@ section .text
 global def_case
 
 myprintf:
-        ;pop r10
-;
-        ;mov rsi, format
-        ;mov rdx, string1
-        ;mov rcx, oct1
-        ;mov r8,  hex1
-        ;mov r9,  dec1
-;
-        ;push r9
-        ;push r8
-        ;push rcx
-        ;push rdx
-        ;push rsi
-;
-;
-        ;pop rax
-        ;mov rdi, rax
-;
-        ;mov rsi, buffer
+        push rbp                            ; save rbp
+        mov rbp, rsp                        ; rbp - counter for stack
+        add rbp, 16                          ; go to the first argument
+
+
+        mov rdi, [rbp]
+        add rbp, 8
+
+        mov rsi, buffer
+
 
 .HANDLING:
         mov rax, [rdi]
-
-        push rbp                            ; save rbp
-        mov rbp, rsp                        ; rbp - counter for stack
-        add rbp, 8                          ; go to the first argument
+        inc rdi
 
         call _switch_ops
 
-        cmp rax, '\0'
+        cmp al, 0
         jne .HANDLING
 
         ;stream buffer using syscall
         call _buffer_stdout
 
-        ;mov rax, 0x3C       ;END OF PROGRAM
-        ;xor rdi, rdi
-        ;syscall
+        pop rbp
 
         ret
 
 _switch_ops:
-        cmp rax, '%'
-        jne def_case
+        cmp al, '%'
+        je .OP_CHECK
+        jmp def_case
 
 .OP_CHECK:
-        inc rdi
         mov rax, [rdi]
         inc rdi
 
-        cmp rax, '%'
+        cmp al, '%'
         je prc_op
 
-        sub rax, 'a'
 
+        mov rbx, 'a'
+        sub rax, rbx
+        and rax, 11111111b
         mov rax, [table + rax * 8]
         jmp rax
 
@@ -128,19 +106,19 @@ _switch_ops:
         jmp def_case
 
 s_op:
-        add rbp, 8
         mov rax, [rbp]
+        add rbp, 8
 
         ;put string to bufer
         call _str_to_buf
 
-        jmp def_case
+        jmp EOT
 c_op:
-        add rbp, 8
         mov rax, [rbp]
+        add rbp, 8
 
         ;put char to the bufer
-        call _char_to_buf
+        ;call _char_to_buf
 
         jmp def_case
 d_op:
@@ -182,18 +160,9 @@ p_op:
 prc_op:
         jmp def_case
 def_case:
-        mov [rsi], ax
-        ;skip   ;push rdi
-                ;push rsi
-
-                ;mov rax, 0x01
-                ;mov rdi, 1
-                ;mov rsi, ErrDef
-                ;mov rdx, ErrDefLen
-                ;syscall
-
-                ;pop rsi
-                ;pop rdi
+        mov [rsi], al
+        inc rsi
+EOT:
 
         ret
 
@@ -202,8 +171,6 @@ _binfit_to_buf:
         pop rbx             ;slip
         pop rcx             ;nums quantity
         pop rax             ;number
-        ;push rcx
-        ;mov rcx, 4         ;for %b - 8 ; %d - ? ; %o - 5
 
 .LOOP_X:
         push rax
@@ -227,7 +194,7 @@ _dec_to_buf:
 .LOOP_D:
         div rbx             ; rax <- quotient & rbx <- reminder
 
-        mov [rsi], bx
+        mov [rsi], rbx
         inc rsi
 
         test rax, rax
@@ -236,9 +203,10 @@ _dec_to_buf:
         ret
 
 _char_to_buf:
+        ;call _debug_output
         and rax, 11111111b
 
-        mov [rsi], eax
+        mov [rsi], ax
         inc rsi
 
         ret
@@ -248,19 +216,20 @@ _str_to_buf:
         mov rdi, rax
 
 .STR_OUT:
-        cmp word [rdi], '\0'
+        mov ax, [rdi]
+        cmp al, 0
         je .END_STR_OUT
 
-        mov ax, [rdi]
-        mov [rsi], ax
+        mov rax, [rdi]
+        ;call _debug_output
+        mov [rsi], al
         inc rsi
         inc rdi
 
         jmp .STR_OUT
 
 .END_STR_OUT:
-        pop rax
-        mov rdi, rax
+        pop rdi
         ret
 
 _buffer_stdout:
@@ -271,10 +240,38 @@ _buffer_stdout:
         mov rdx, BUF_SIZE
         syscall
 
-        ;clear buffer
+        call _clear_buffer
+
+        ret
+
+_clear_buffer:
         mov rdi, buffer
         mov rcx, 128
         xor rax, rax
         rep stosb
+
+        ret
+
+_debug_output:
+        mov [out_mes], al
+        push rax
+        mov rax, 0x0A
+        mov [out_mes + 1], al
+        ;mov [out_mes + 2], al
+        push rdi
+        push rsi
+        push rdx
+
+
+        mov rax, 0x01      ; write64 (rdi, rsi, rdx) ... r10, r8, r9
+        mov rdi, 1         ; stdout
+        mov rsi, out_mes
+        mov rdx, 3       ; strlen (Msg)
+        syscall
+
+        pop rdx
+        pop rsi
+        pop rdi
+        pop rax
 
         ret
