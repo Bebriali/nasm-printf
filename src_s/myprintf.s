@@ -3,6 +3,7 @@ global myprintf
 section .bss
         buffer  resb BUF_SIZE
         out_mes resb BUF_SIZE
+        num_buf resb MAX_NUM_LEN
 
 section .rodata
 
@@ -40,6 +41,7 @@ section .data
 
         var         dq  0xffffaaaa
 
+        MAX_NUM_LEN equ 20
         BUF_SIZE    equ 128
         SYS_WRITE   equ 1
         STDOUT      equ 1
@@ -66,13 +68,15 @@ myprintf:
 
         mov rsi, buffer
 
-
-.HANDLING:
         mov rax, [rdi]
         inc rdi
 
+.HANDLING:
+
         call _switch_ops
 
+        mov rax, [rdi]
+        inc rdi
         cmp al, 0
         jne .HANDLING
 
@@ -99,6 +103,8 @@ _switch_ops:
         mov rbx, 'a'
         sub rax, rbx
         and rax, 11111111b
+
+
         mov rax, [table + rax * 8]
         jmp rax
 
@@ -117,12 +123,9 @@ c_op:
         mov rax, [rbp]
         add rbp, 8
 
-        ;put char to the bufer
-        ;call _char_to_buf
-
         jmp def_case
 d_op:
-        push 4          ;nums_quantity
+        ;push 4          ;nums_quantity
         push 10         ;radix
 
         call _dec_to_buf
@@ -153,8 +156,8 @@ b_op:
                 ;(buffer addr in rsi)
         jmp def_case
 p_op:
-        add rbp, 8
         mov rax, [rbp]
+        add rbp, 8
         ;get ptr translation
         jmp def_case
 prc_op:
@@ -167,46 +170,110 @@ EOT:
         ret
 
 _binfit_to_buf:
+        pop r10             ;ret ptr
+
         pop rdx             ;mask for 1 digit
         pop rbx             ;slip
         pop rcx             ;nums quantity
-        pop rax             ;number
+
+        mov rax, [rbp]      ;pop rax
+        add rbp, 8
+
+        add rsi, rcx
+        push rsi
+        dec rsi
 
 .LOOP_X:
         push rax
         and rax, rdx
 
-        mov [rsi], ax
-        inc rsi
+        cmp al, 9h
+        ja  .LITERA
+        jmp .DIGIT
+
+.LITERA:
+        add al, 57h
+        jmp .EO_TRNSLTN
+.DIGIT:
+        add al, 30h
+        jmp .EO_TRNSLTN
+
+.EO_TRNSLTN:
+        mov [rsi], al
+        dec rsi
+        ;call _debug_output
 
         pop rax
+        push cx
         mov cl, bl
         shr rax, cl        ;for %b - 1 ; %d - ? ; %o - 3
+        pop cx
         loop .LOOP_X
 
+        pop rsi
+        push r10
         ret
 
 _dec_to_buf:
+        pop r10             ;ret ptr
         pop rbx             ;radix
-        pop rcx             ;nums quantity
-        pop rax
+
+        xor rcx, rcx
+        push rdi
+        mov rdi, num_buf
+        mov rax, [rbp]      ;pop rax
+        add rbp, 8
 
 .LOOP_D:
-        div rbx             ; rax <- quotient & rbx <- reminder
+        xor edx, edx
+        inc rcx
+        push rcx
+        mov rcx, rbx
+        div ecx             ; rax <- quotient & rbx <- reminder
+        mov rbx, rcx
+        pop rcx
 
-        mov [rsi], rbx
-        inc rsi
+        cmp dl, 9h
+        ja  .LITERA
+        jmp .DIGIT
+
+.LITERA:
+        add dl, 57h
+        jmp .EO_TRNSLTN
+.DIGIT:
+        add dl, 30h
+        jmp .EO_TRNSLTN
+
+.EO_TRNSLTN:
+
+        mov [rdi], dl         ;put in num_buf
+        inc rdi
 
         test rax, rax
         jnz .LOOP_D
 
+        dec rdi
+        ;dec rsi
+.REFL:
+        mov al, [rdi]
+        mov [rsi], al
+        dec rdi
+        inc rsi
+
+        loop .REFL
+
+        pop rdi
+        ;inc rdi
+        ;mov rax, [rdi]
+        ;inc rdi
+        push r10
         ret
 
 _char_to_buf:
         ;call _debug_output
         and rax, 11111111b
 
-        mov [rsi], ax
+        mov [rsi], al
         inc rsi
 
         ret
@@ -253,9 +320,11 @@ _clear_buffer:
         ret
 
 _debug_output:
+        add al, 30h
         mov [out_mes], al
+        sub al, 30h
         push rax
-        mov rax, 0x0A
+        mov rax, 0x03
         mov [out_mes + 1], al
         ;mov [out_mes + 2], al
         push rdi

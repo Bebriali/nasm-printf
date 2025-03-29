@@ -1,2 +1,3 @@
  nasm -f elf64 -o ./src_s/try.o ./src_s/try.s
  gcc -o test_printf ./src_c/test_printf.cpp ./src_s/try.o
+ ld -s -o test_printf main.o myprintf.o
