@@ -1,6 +1,7 @@
 #include <stdio.h>
 
 extern "C" int _start_printf(const char* format, ...);
+extern "C" void c_exit(void);
 
 int main()
 {
@@ -32,7 +33,7 @@ int main()
     
     _start_printf
     (
-       "printing such strings in that particular way is so '%d' and, to be %x, ill do it %s years\n",
+       "printing such strings in that particular way is so '%d' and, to be %x, ill do it %s years\n\0",
        1000000,
        0xdead,
        "honest"
@@ -42,7 +43,7 @@ int main()
 
     _start_printf
     (
-        "%s%o%%%%%%x%d%string%ceal//&stroke\n",
+        "%s%o%%%%%x%d%%string%%ceal//&stroke\n",
         "string",
         888,
         0xface,
@@ -51,5 +52,5 @@ int main()
 
     printf("main function finished!\n");
 
-    return 0;
+    c_exit();
 }

@@ -1,4 +1,4 @@
-;%define DEBUG 1
+; %define DEBUG 1
 extern myprintf
 
 
@@ -62,7 +62,6 @@ _start_printf:
     pop r8
     pop r9
 
-    push r10
 
 %ifdef DEBUG
     mov rax, 0x3C      ; exit64 (rdi)
@@ -70,4 +69,5 @@ _start_printf:
     syscall
 %endif
 
+    push r10
     ret

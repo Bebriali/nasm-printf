@@ -22,5 +22,11 @@ $(TARGET) : $(OBJ_C) $(OBJ_S)
 $(PREF_OBJ)%.o : $(PREF_SRC_C)%.cpp
 	$(CC) -c $< -I include -o $@ $(CFLAGS)
 
+./src_s/main.o : ./src_s/main.s
+	nasm -f elf64 -o ./obj/main.o ./src_s/main.s
+
+./src_s/myprintf.o : ./src_s/myprintf.s
+	nasm -f elf64 -o ./obj/myprintf.o ./src_s/myprintf.s
+
 clean :
 	rm $(TARGET).exe $(PREF_OBJ)*.o

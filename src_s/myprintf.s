@@ -58,6 +58,7 @@ section .text
 global def_case
 
 myprintf:
+        ;push r10
         push rbp                            ; save rbp
         mov rbp, rsp                        ; rbp - counter for stack
         add rbp, 16                          ; go to the first argument
@@ -84,6 +85,7 @@ myprintf:
         call _buffer_stdout
 
         pop rbp
+        ;pop r10
 
         ret
 
@@ -170,7 +172,7 @@ EOT:
         ret
 
 _binfit_to_buf:
-        pop r10             ;ret ptr
+        pop r9             ;ret ptr
 
         pop rdx             ;mask for 1 digit
         pop rbx             ;slip
@@ -211,11 +213,11 @@ _binfit_to_buf:
         loop .LOOP_X
 
         pop rsi
-        push r10
+        push r9
         ret
 
 _dec_to_buf:
-        pop r10             ;ret ptr
+        pop r9             ;ret ptr
         pop rbx             ;radix
 
         xor rcx, rcx
@@ -266,7 +268,7 @@ _dec_to_buf:
         ;inc rdi
         ;mov rax, [rdi]
         ;inc rdi
-        push r10
+        push r9
         ret
 
 _char_to_buf:
