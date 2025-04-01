@@ -9,7 +9,7 @@ int main()
 
     _start_printf
     (
-        "%%check if percent\nlox\n"
+        "%%check if percent\nxmm..\n"
     );
 
     printf("\nintermediate printf\n");
@@ -24,13 +24,13 @@ int main()
         "print just one char: %c \n",
         'x'
     );
-    
+
     _start_printf
     (
         "print just one string: %s \n",
         "sosi lox love u)))\n"
     );
-    
+
     _start_printf
     (
        "printing such strings in that particular way is so '%d' and, to be %x, ill do it %s years\n\0",
@@ -39,7 +39,7 @@ int main()
        "honest"
     );
 
-    printf("loshara ebucha%ca\n", 'y');
+    printf("mandelbro%cher\n", 't');
 
     _start_printf
     (
@@ -48,6 +48,18 @@ int main()
         888,
         0xface,
         1000
+    );
+
+    _start_printf
+    (
+        "check%dng more %% arguments%c How about %d %c? it's strange if it would %x problems, isn't it? %o and %b",
+        1,
+        '.',
+        7,
+        '?',
+        0xface,
+        88,
+        0b1001001
     );
 
     printf("main function finished!\n");

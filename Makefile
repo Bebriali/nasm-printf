@@ -13,20 +13,24 @@ PREF_OBJ   = ./obj/
 
 SRC_C = $(wildcard $(PREF_SRC_C)*.cpp)
 SRC_S = $(wildcard $(PREF_SRC_S)*.s)
-OBJ_C = $(patsubst $(PREF_SRC_C)%.cpp, $(PREF_OBJ)%.o, $(SRC_C))
-OBJ_S = $(patsubst $(PREF_SRC_S)%.s,   $(PREF_OBJ)%.o, $(SRC_S))
+# OBJ_C = $(patsubst $(PREF_SRC_C)%.cpp, $(PREF_OBJ)%.o, $(SRC_C))
+OBJ_S = $(patsubst $(PREF_SRC_S)%.s, $(PREF_OBJ)%.o, $(SRC_S))
 
 $(TARGET) : $(OBJ_C) $(OBJ_S)
-	$(CC) $(OBJ_C) $(OBJ_S) -o $(TARGET) -no-pie
+	$(CC) -o $(TARGET) $(SRC_C) $(OBJ_S) -no-pie
 
-$(PREF_OBJ)%.o : $(PREF_SRC_C)%.cpp
-	$(CC) -c $< -I include -o $@ $(CFLAGS)
+$(PREF_OBJ)%.o : $(PREF_SRC_S)%.s
+	nasm -f elf64 $< -o $@
+# $(CC) -c $< -o $@ $(CFLAGS)
 
-./src_s/main.o : ./src_s/main.s
-	nasm -f elf64 -o ./obj/main.o ./src_s/main.s
-
-./src_s/myprintf.o : ./src_s/myprintf.s
-	nasm -f elf64 -o ./obj/myprintf.o ./src_s/myprintf.s
+# ./obj/main.o : ./src_s/main.s
+# 	nasm -f elf64 -o ./obj/main.o ./src_s/main.s
+#
+# ./obj/myprintf.o : ./src_s/myprintf.s
+# 	nasm -f elf64 -o ./obj/myprintf.o ./src_s/myprintf.s
+#
+# ./obj/c_exit.o : ./src_s/c_exit.s
+# 	nasm -f elf64 -o ./obj/c_exit.o ./src_s/c_exit.s
 
 clean :
-	rm $(TARGET).exe $(PREF_OBJ)*.o
+	rm $(TARGET) $(PREF_OBJ)*.o
