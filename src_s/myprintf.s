@@ -132,7 +132,7 @@ d_op:
 
         call _dec_to_buf
 
-        jmp def_case
+        jmp EOT
 x_op:
         push 4          ;nums_quantity
         push 4          ;slip
